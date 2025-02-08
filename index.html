@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mathy</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --primary-color: #03dac6;
+            --button-bg: #03dac6;
+            --button-text: #121212;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .game-container {
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px var(--shadow-color);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 1rem;
+            margin-right: 10px;
+        }
+
+        select {
+            font-size: 1rem;
+            padding: 5px;
+            background: var(--container-bg);
+            color: var(--text-color);
+            border: 1px solid var(--text-color);
+            border-radius: 5px;
+        }
+
+        #score {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        #timer {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        #equation {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            min-height: 50px;
+            transition: all 0.5s ease-in-out;
+        }
+
+        input[type="text"] {
+            font-size: 1rem;
+            padding: 10px;
+            width: 80%;
+            margin-bottom: 10px;
+            border: 1px solid var(--text-color);
+            border-radius: 5px;
+            background: var(--container-bg);
+            color: var(--text-color);
+        }
+
+        button {
+            font-size: 1rem;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border-radius: 5px;
+            box-shadow: 0 0 8px var(--shadow-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
+
+        .fraction {
+            display: inline-block;
+            text-align: center;
+            vertical-align: middle;
+            margin: 0 2px;
+        }
+
+        .fraction .numerator {
+            display: block;
+            border-bottom: 1px solid var(--text-color);
+            padding: 0 2px;
+        }
+
+        .fraction .denominator {
+            display: block;
+            padding: 0 2px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <div class="control-group">
+            <label for="difficulty">Select Difficulty:</label>
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+        <div id="score">Score: 0</div>
+        <div id="timer">60</div>
+        <div id="equation">Your equation will appear here</div>
+        <input type="text" id="answer" placeholder="Enter your answer" />
+        <button id="submit">Submit</button>
+    </div>
+    <script>
+        function processOperator(op, operand) {
+            if ((op === '+' || op === '-') && operand < 0) {
+                if (op === '+') {
+                    return { operator: '-', operand: Math.abs(operand) };
+                } else if (op === '-') {
+                    return { operator: '+', operand: Math.abs(operand) };
+                }
+            } else if ((op === '*' || op === '/') && operand < 0) {
+                return { operator: op, operand: `(${operand})` };
+            }
+            return { operator: op, operand: operand };
+        }
+        function displayDivision(numerator, denominator) {
+            return `<span class="fraction"><span class="numerator">${numerator}</span><span class="denominator">${denominator}</span></span>`;
+        }
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval;
+        let currentAnswer;
+        let currentDifficulty = 'easy'
+        function startTimer() {
+            clearInterval(timerInterval);
+            if (currentDifficulty === 'easy') {
+                timeLeft = 5;
+            } else if (currentDifficulty === 'medium') {
+                timeLeft = 15;
+            } else if (currentDifficulty === 'hard') {
+                timeLeft = 30;
+            }
+            document.getElementById('timer').textContent = timeLeft;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    score--;
+                    updateScore();
+                    generateProblem(currentDifficulty);
+                }
+            }, 1000);
+        }
+        function updateScore() {
+            document.getElementById('score').textContent = "Score: " + score;
+        }
+        function generateEasyProblemDynamic() {
+            let operators = ['+', '-', '*', '/'];
+            let numOperands = Math.random() < 0.5 ? 2 : 3;
+            let evalExpr = "", displayExpr = "";
+            if (numOperands === 2) {
+                let op = operators[Math.floor(Math.random() * operators.length)];
+                let a, b;
+                if (op === '/') {
+                    b = Math.floor(Math.random() * 10) + 1;
+                    let multiplier = Math.floor(Math.random() * 21) - 10;
+                    a = b * multiplier;
+                    evalExpr = `${a} / ${b}`;
+                    displayExpr = displayDivision(a, b);
+                } else {
+                    a = Math.floor(Math.random() * 21) - 10;
+                    b = Math.floor(Math.random() * 21) - 10;
+                    evalExpr = `${a} ${op} ${b}`;
+                    let processed = processOperator(op, b);
+                    displayExpr = `${a} ${processed.operator} ${processed.operand}`;
+                }
+            } else {
+                let op1 = operators[Math.floor(Math.random() * operators.length)];
+                let op2 = operators[Math.floor(Math.random() * operators.length)];
+                let a, b, c;
+                if (op1 === '/') {
+                    b = Math.floor(Math.random() * 10) + 1;
+                    let multiplier = Math.floor(Math.random() * 21) - 10;
+                    a = b * multiplier;
+                } else {
+                    a = Math.floor(Math.random() * 21) - 10;
+                    b = Math.floor(Math.random() * 21) - 10;
+                }
+                let part1Eval = `${a} ${op1} ${b}`;
+                let processed1 = processOperator(op1, b);
+                let part1Display = (op1 === '/') ? displayDivision(a, b) : `${a} ${processed1.operator} ${processed1.operand}`;
+                if (op2 === '/') {
+                    let firstPart = eval(part1Eval);
+                    if (firstPart === 0) {
+                        c = Math.floor(Math.random() * 10) + 1;
+                    } else {
+                        let possibleDivisors = [];
+                        for (let i = 1; i <= 10; i++) {
+                            if (firstPart % i === 0) {
+                                possibleDivisors.push(i, -i);
+                            }
+                        }
+                        c = possibleDivisors[Math.floor(Math.random() * possibleDivisors.length)];
+                    }
+                    evalExpr = `${a} ${op1} ${b} ${op2} ${c}`;
+                    let processed2 = processOperator(op2, c);
+                    displayExpr = `<span class="fraction"><span class="numerator">${part1Display}</span><span class="denominator">${processed2.operand}</span></span>`;
+                } else {
+                    c = Math.floor(Math.random() * 21) - 10;
+                    evalExpr = `${a} ${op1} ${b} ${op2} ${c}`;
+                    let processed2 = processOperator(op2, c);
+                    displayExpr = `${part1Display} ${processed2.operator} ${processed2.operand}`;
+                }
+            }
+            return { equation: displayExpr + " = ?", answer: eval(evalExpr) };
+        }
+        function generateMediumTemplate1() {
+            let operators = ['+', '-', '*'];
+            let a = Math.floor(Math.random() * 21) - 10;
+            let b = Math.floor(Math.random() * 21) - 10;
+            let c = Math.floor(Math.random() * 21) - 10;
+            let d = Math.floor(Math.random() * 21) - 10;
+            let op1 = operators[Math.floor(Math.random() * operators.length)];
+            let op2 = operators[Math.floor(Math.random() * operators.length)];
+            let op3 = operators[Math.floor(Math.random() * operators.length)];
+            let expr = `(${a} ${op1} ${b}) ${op2} (${c} ${op3} ${d})`;
+            return { equation: expr + " = ?", answer: eval(expr) };
+        }
+        function generateMediumTemplate2() {
+            let operators = ['+', '-', '*'];
+            let a = Math.floor(Math.random() * 21) - 10;
+            let b = Math.floor(Math.random() * 21) - 10;
+            let c = Math.floor(Math.random() * 21) - 10;
+            let d = Math.floor(Math.random() * 21) - 10;
+            let op1 = operators[Math.floor(Math.random() * operators.length)];
+            let op2 = operators[Math.floor(Math.random() * operators.length)];
+            let op3 = operators[Math.floor(Math.random() * operators.length)];
+            let expr = `${a} ${op1} ( ${b} ${op2} ${c} ) ${op3} ${d}`;
+            return { equation: expr + " = ?", answer: eval(expr) };
+        }
+        function generateMediumProblemDynamic() {
+            let templates = [generateMediumTemplate1, generateMediumTemplate2];
+            let templateFn = templates[Math.floor(Math.random() * templates.length)];
+            return templateFn();
+        }
+        function generateHardProblemDynamic() {
+            if (Math.random() < 0.5) {
+                const a = Math.floor(Math.random() * 9) + 1;
+                const x = Math.floor(Math.random() * 21) - 10;
+                const b = Math.floor(Math.random() * 21) - 10;
+                const c = a * x + b;
+                let eqString = (a === 1 ? "x" : `${a}x`);
+                eqString += (b >= 0 ? " + " + b : " - " + Math.abs(b));
+                eqString += " = " + c;
+                return { equation: eqString + "   (Solve for x)", answer: x };
+            } else {
+                let a = Math.floor(Math.random() * 9) + 1;
+                let c = Math.floor(Math.random() * 9) + 1;
+                while (c === a) {
+                    c = Math.floor(Math.random() * 9) + 1;
+                }
+                const x = Math.floor(Math.random() * 21) - 10;
+                const b = Math.floor(Math.random() * 21) - 10;
+                const d = a * x + b - c * x;
+                let leftSide = (a === 1 ? "x" : `${a}x`);
+                leftSide += (b >= 0 ? " + " + b : " - " + Math.abs(b));
+                let rightSide = (c === 1 ? "x" : `${c}x`);
+                rightSide += (d >= 0 ? " + " + d : " - " + Math.abs(d));
+                let eqString = leftSide + " = " + rightSide;
+                return { equation: eqString + "   (Solve for x)", answer: x };
+            }
+        }
+        function generateProblem(difficulty) {
+            clearInterval(timerInterval);
+            startTimer();
+            let problem;
+            if (difficulty === 'easy') {
+                problem = generateEasyProblemDynamic();
+            } else if (difficulty === 'medium') {
+                problem = generateMediumProblemDynamic();
+            } else if (difficulty === 'hard') {
+                problem = generateHardProblemDynamic();
+            }
+            currentAnswer = problem.answer;
+            document.getElementById('equation').innerHTML = problem.equation;
+            document.getElementById('answer').value = "";
+            document.getElementById('equation').style.animation = 'fadeIn 0.5s ease-out';
+        }
+        document.getElementById('submit').addEventListener('click', () => {
+            const userInput = document.getElementById('answer').value;
+            if (parseFloat(userInput) === currentAnswer) {
+                score++;
+            } else {
+                score--;
+            }
+            updateScore();
+            generateProblem(currentDifficulty);
+        });
+        document.getElementById('answer').addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                document.getElementById('submit').click();
+            }
+        });
+        document.getElementById('difficulty').addEventListener('change', (e) => {
+            currentDifficulty = e.target.value;
+            generateProblem(currentDifficulty);
+        });
+        generateProblem(currentDifficulty);
+    </script>
+</body>
+
+</html>
