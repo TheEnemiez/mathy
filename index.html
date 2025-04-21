@@ -3,28 +3,32 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Mathy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mathy Practice</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --bg: #121212;
             --surface: #1e1e1e;
             --accent: #9b0089;
+            --accent-add: #007acc;
+            --accent-sub: #d14a00;
+            --accent-mul: #9b0089;
+            --accent-div: #008a4b;
             --text-primary: #e0e0e0;
             --text-secondary: #a0a0a0;
-            --border: #2a2a2a
+            --border: #2a2a2a;
         }
 
         *::-webkit-scrollbar {
             width: 0;
-            height: 0
+            height: 0;
         }
 
-        *,
         * {
             box-sizing: border-box;
             -ms-overflow-style: none;
-            scrollbar-width: none
+            scrollbar-width: none;
         }
 
         body {
@@ -34,7 +38,9 @@
             margin: 0;
             padding: 2rem;
             display: flex;
-            justify-content: center
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
         }
 
         #app {
@@ -43,13 +49,51 @@
             border-radius: 12px;
             width: 100%;
             max-width: 480px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, .5)
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 1.5rem;
+            font-size: 2rem;
+            color: var(--accent);
+        }
+
+        .mode-selector {
+            margin-bottom: 1.5rem;
+        }
+
+        #changeModeBtn {
+            width: auto;
+            padding: 0.6rem 1.2rem;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            margin-bottom: 1.5rem;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            color: var(--text-secondary);
+            font-weight: normal;
+        }
+
+        #changeModeBtn:hover {
+            background: #3a3a3a;
+            border-color: #666;
+            color: var(--text-primary);
+        }
+
+        #changeModeBtn:focus {
+            outline: 2px solid var(--current-accent, var(--accent));
+            outline-offset: 2px;
         }
 
         .question {
             font-size: 2.5rem;
             text-align: center;
-            margin: 1.5rem 0
+            margin: 1.5rem 0;
+            font-weight: bold;
         }
 
         input#answerInput {
@@ -59,55 +103,81 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
-            color: var(--text-primary)
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        input#answerInput::-webkit-outer-spin-button,
+        input#answerInput::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         input:focus {
-            outline: 2px solid var(--accent)
+            outline: 2px solid var(--current-accent, var(--accent));
         }
 
         button {
             width: 100%;
-            padding: .75rem;
+            padding: 0.75rem;
             font-size: 1.1rem;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             margin-top: 1rem;
-            transition: background .2s;
+            transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
             background: var(--surface);
             border: 1px solid var(--border);
-            color: var(--text-primary)
+            color: var(--text-primary);
+            font-weight: bold;
         }
 
-        button:hover {
+        #submitBtn {
+            color: white;
+        }
+
+        #submitBtn:hover {
+            opacity: 0.85;
+        }
+
+        #showStats:hover {
             background: var(--accent);
-            border-color: var(--accent)
+            border-color: var(--accent);
+            color: white;
         }
 
         .popup {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--surface);
-            color: var(--accent);
-            padding: .75rem 1rem;
+            background: #2a2a2a;
+            color: #4caf50;
+            padding: 0.75rem 1rem;
             border-radius: 8px;
             opacity: 0;
-            transition: opacity .3s;
-            font-weight: bold
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .popup.show {
+            opacity: 1;
+            transform: translateX(0);
         }
 
         .modal {
             display: none;
             position: fixed;
+            z-index: 999;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, .8);
+            background: rgba(0, 0, 0, 0.8);
             align-items: center;
-            justify-content: center
+            justify-content: center;
         }
 
         .modal-content {
@@ -115,56 +185,458 @@
             padding: 2rem;
             border-radius: 12px;
             width: 90%;
-            max-width: 600px;
+            max-width: 700px;
             max-height: 80vh;
             overflow-y: auto;
-            color: var(--text-primary)
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .modal-content h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.25rem;
+        }
+
+        .modal-content ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+
+        .modal-content li {
+            padding: 0.25rem 0;
+        }
+
+        .modal-content b {
+            color: var(--text-primary);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem
+            margin-top: 1rem;
         }
 
         th,
         td {
-            padding: .75rem;
-            border-bottom: 1px solid var(--border)
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            font-size: 0.9rem;
         }
 
         th {
-            background: #1a1a1a;
-            text-align: left
+            background: #2a2a2a;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+            color: var(--text-secondary);
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background: #242424;
         }
 
         tr:hover {
-            background: #1a1a1a
+            background: #333;
         }
 
         #exportJSON,
-        #closeStats {
+        #closeStats,
+        #clearStatsBtn {
             width: auto;
-            padding: .5rem 1rem;
-            margin-top: 1rem
+            padding: 0.5rem 1rem;
+            margin-top: 1.5rem;
+            margin-right: 0.5rem;
+            font-weight: normal;
+            display: inline-block;
+            width: auto;
+        }
+
+        #closeStats {
+            margin-right: 0;
+        }
+
+        #clearStatsBtn {
+            background-color: #d14a00;
+            border-color: #d14a00;
+            color: white;
+        }
+
+        #clearStatsBtn:hover {
+            opacity: 0.85;
+        }
+
+        #exportJSON:hover,
+        #closeStats:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+            transform: translate3d(0, 0, 0);
         }
     </style>
 </head>
 
 <body>
     <div id="app">
-        <div class="question" id="question"></div><input type="number" id="answerInput" placeholder="Your answer…"
-            autocomplete="off"><button id="submitBtn">Submit</button><button id="showStats">View Stats</button>
+        <h1 id="appTitle">Mathy Practice</h1>
+        <div class="mode-selector">
+            <button id="changeModeBtn">Mode: Multiplication (x)</button>
+        </div>
+        <div class="question" id="question">Loading...</div>
+        <input type="number" id="answerInput" placeholder="Your answer..." autocomplete="off" />
+        <button id="submitBtn">Submit</button>
+        <button id="showStats">View Stats</button>
     </div>
     <div id="solveTimePopup" class="popup"></div>
     <div id="statsModal" class="modal">
         <div class="modal-content">
-            <h2>Statistics</h2>
-            <div id="statsDetails"></div><button id="exportJSON">Copy JSON</button><button
-                id="closeStats">Close</button>
+            <h2 id="statsTitle">Statistics</h2>
+            <div id="statsDetails"></div>
+            <button id="exportJSON">Copy All Stats (JSON)</button>
+            <button id="clearStatsBtn">Clear All Stats</button>
+            <button id="closeStats">Close</button>
         </div>
     </div>
-    <script>const MIN = 2, MAX = 9; let currentAnswer, startTime, sessionStart = Date.now(); const dailyKey = 'multiplication_daily_times', problemsKey = 'multiplication_problem_times', randomInt = (m, M) => Math.floor(Math.random() * (M - m + 1)) + m, formatDate = dt => new Date(dt).toLocaleString('en-US', { hour12: true }), formatTime = s => { const ms = Math.floor((s % 1) * 1e3); let t = Math.floor(s), hrs = Math.floor(t / 3600); t %= 3600; const mins = Math.floor(t / 60), secs = t % 60, parts = []; if (hrs) parts.push(`${hrs}h`); if (mins) parts.push(`${mins}m`); parts.push(`${secs}s`); if (ms) parts.push(`${ms}ms`); return parts.join(' ') }, load = k => JSON.parse(localStorage.getItem(k) || '[]'), save = (k, d) => localStorage.setItem(k, JSON.stringify(d)), loadDaily = () => JSON.parse(localStorage.getItem(dailyKey) || '{}'), saveDaily = o => localStorage.setItem(dailyKey, JSON.stringify(o)); function newQuestion() { const a = randomInt(MIN, MAX), b = randomInt(MIN, MAX); currentAnswer = a * b; const q = document.getElementById('question'), i = document.getElementById('answerInput'); q.textContent = `${a} x ${b} = ?`; i.value = ''; i.focus(); startTime = Date.now() } function showPopup(m) { const p = document.getElementById('solveTimePopup'); p.textContent = m; p.style.opacity = 1; setTimeout(() => p.style.opacity = 0, 2e3) } function submitAnswer() { const ans = +document.getElementById('answerInput').value; if (ans === currentAnswer) { const elapsed = (Date.now() - startTime) / 1e3, q = document.getElementById('question').textContent, ps = load(problemsKey); ps.push({ question: q, time: elapsed, formatted: formatTime(elapsed), timestamp: formatDate(Date.now()) }); save(problemsKey, ps); showPopup(`Solved in ${formatTime(elapsed)}`); newQuestion() } } document.getElementById('submitBtn').onclick = submitAnswer; document.getElementById('answerInput').addEventListener('keypress', e => e.key === 'Enter' && submitAnswer()); document.getElementById('showStats').onclick = () => { const daily = loadDaily(), ps = load(problemsKey), latest = ps.slice(-10).reverse(); let html = `<h3>Problems Solved (${ps.length})</h3><table><tr><th>Question</th><th>Time</th><th>Solved At</th></tr>`; latest.forEach(p => html += `<tr><td>${p.question}</td><td>${p.formatted}</td><td>${p.timestamp}</td></tr>`); html += `</table><h3>Daily Time</h3><ul>`; Object.entries(daily).forEach(([d, t]) => html += `<li>${d}: ${formatTime(t)}</li>`); document.getElementById('statsDetails').innerHTML = html + '</ul>'; document.getElementById('statsModal').style.display = 'flex' }; document.getElementById('closeStats').onclick = () => document.getElementById('statsModal').style.display = 'none'; document.getElementById('exportJSON').onclick = () => navigator.clipboard.writeText(JSON.stringify({ daily: loadDaily(), problems: load(problemsKey) })); window.addEventListener('beforeunload', () => { const daily = loadDaily(), today = new Date().toISOString().slice(0, 10), elapsed = (Date.now() - sessionStart) / 1e3; daily[today] = (daily[today] || 0) + elapsed; saveDaily(daily) }); newQuestion();</script>
+    <script>
+        const MIN_OPERAND = 1;
+        const MAX_OPERAND_EASY = 10;
+        const MAX_OPERAND_HARDER = 12;
+        const MAX_RESULT_ADD = 50;
+        const MAX_DIVIDEND = 144;
+        let currentAnswer, startTime;
+        const availableModes = ['multiplication', 'addition', 'subtraction', 'division'];
+        let currentModeIndex = 0;
+        let currentGameMode = availableModes[currentModeIndex];
+        const sessionStart = Date.now();
+        const dailyTimeKey = 'math_practice_daily_times';
+        const problemsKey = 'math_practice_problem_times';
+        const modeConfig = {
+            addition: { operator: '+', color: 'var(--accent-add)', hexColor: '#007acc', min: MIN_OPERAND, max: MAX_OPERAND_EASY },
+            subtraction: { operator: '-', color: 'var(--accent-sub)', hexColor: '#d14a00', min: MIN_OPERAND, max: MAX_OPERAND_EASY },
+            multiplication: { operator: 'x', color: 'var(--accent-mul)', hexColor: '#9b0089', min: MIN_OPERAND + 1, max: MAX_OPERAND_HARDER },
+            division: { operator: '÷', color: 'var(--accent-div)', hexColor: '#008a4b', min: MIN_OPERAND + 1, max: MAX_OPERAND_HARDER }
+        };
+        const questionEl = document.getElementById('question');
+        const answerInputEl = document.getElementById('answerInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const showStatsBtn = document.getElementById('showStats');
+        const popupEl = document.getElementById('solveTimePopup');
+        const statsModal = document.getElementById('statsModal');
+        const statsDetailsEl = document.getElementById('statsDetails');
+        const exportBtn = document.getElementById('exportJSON');
+        const closeStatsBtn = document.getElementById('closeStats');
+        const changeModeBtn = document.getElementById('changeModeBtn');
+        const appTitleEl = document.getElementById('appTitle');
+        const statsTitleEl = document.getElementById('statsTitle');
+        const clearStatsBtn = document.getElementById('clearStatsBtn');
+        function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function formatDate(dt) { return new Date(dt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }); }
+        function formatTime(seconds) {
+            if (seconds < 0.01) return "<10ms";
+            const ms = Math.floor((seconds % 1) * 1000);
+            let total = Math.floor(seconds);
+            const hrs = Math.floor(total / 3600);
+            total %= 3600;
+            const mins = Math.floor(total / 60);
+            const secs = total % 60;
+            const parts = [];
+            if (hrs) parts.push(`${hrs}h`);
+            if (mins) parts.push(`${mins}m`);
+            if (hrs || mins || secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+            if (hrs === 0 && mins === 0 && ms > 0) parts.push(`${ms}ms`);
+            return parts.join(' ');
+        }
+        function load(key) { return JSON.parse(localStorage.getItem(key) || '[]'); }
+        function save(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) { console.error("Failed to save to localStorage", e); alert("Error saving data. LocalStorage might be full.") } }
+        function loadDaily() { return JSON.parse(localStorage.getItem(dailyTimeKey) || '{}'); }
+        function saveDaily(obj) { try { localStorage.setItem(dailyTimeKey, JSON.stringify(obj)); } catch (e) { console.error("Failed to save daily data", e); } }
+        function updateUIForMode() {
+            const config = modeConfig[currentGameMode];
+            const modeName = currentGameMode.charAt(0).toUpperCase() + currentGameMode.slice(1);
+            document.documentElement.style.setProperty('--current-accent', config.color);
+            appTitleEl.textContent = `${modeName} Practice`;
+            appTitleEl.style.color = config.color;
+            questionEl.style.color = config.color;
+            submitBtn.style.backgroundColor = config.color;
+            submitBtn.style.borderColor = config.color;
+            answerInputEl.style.borderColor = '';
+            answerInputEl.classList.remove('shake');
+            answerInputEl.focus();
+        }
+        function newQuestion() {
+            let a, b, questionText;
+            const config = modeConfig[currentGameMode];
+            if (!config) {
+                console.error("Invalid game mode:", currentGameMode);
+                return;
+            }
+            const min = config.min;
+            const max = config.max;
+            switch (currentGameMode) {
+                case 'addition':
+                    a = randomInt(min, max);
+                    b = randomInt(min, Math.min(max, MAX_RESULT_ADD - a + Math.floor(max / 2)));
+                    if (a + b < min + 1) { a = randomInt(min + 1, max); b = randomInt(min + 1, max) }
+                    currentAnswer = a + b;
+                    questionText = `${a} ${config.operator} ${b} = ?`;
+                    break;
+                case 'subtraction':
+                    a = randomInt(min, max * 1.5);
+                    b = randomInt(min, a);
+                    if (a === b) {
+                        a = randomInt(Math.max(min, min + 1), max * 1.5);
+                        b = randomInt(min, a - 1);
+                    }
+                    b = Math.max(min, b);
+                    if (a < b) {
+                        let temp = a; a = b; b = temp;
+                    }
+                    currentAnswer = a - b;
+                    questionText = `${a} ${config.operator} ${b} = ?`;
+                    break;
+                case 'division':
+                    const divisor = randomInt(config.min, config.max);
+                    const quotient = randomInt(MIN_OPERAND, max);
+                    const dividend = quotient * divisor;
+                    if (dividend > MAX_DIVIDEND) {
+                        return newQuestion();
+                    }
+                    if (divisor < 2) {
+                        return newQuestion();
+                    }
+                    a = dividend;
+                    b = divisor;
+                    currentAnswer = quotient;
+                    questionText = `${a} ${config.operator} ${b} = ?`;
+                    break;
+                case 'multiplication':
+                default:
+                    a = randomInt(config.min, max);
+                    b = randomInt(config.min, max);
+                    currentAnswer = a * b;
+                    questionText = `${a} ${config.operator} ${b} = ?`;
+                    break;
+            }
+            questionEl.textContent = questionText;
+            answerInputEl.value = '';
+            answerInputEl.focus();
+            startTime = Date.now();
+            updateUIForMode();
+        }
+        function showPopup(msg) {
+            popupEl.textContent = msg;
+            popupEl.classList.add('show');
+            setTimeout(() => popupEl.classList.remove('show'), 2500);
+        }
+        function submitAnswer() {
+            const ans = parseInt(answerInputEl.value, 10);
+            if (isNaN(ans)) {
+                answerInputEl.style.borderColor = 'red';
+                setTimeout(() => {
+                    if (answerInputEl.style.borderColor === 'red') {
+                        answerInputEl.style.borderColor = '';
+                    }
+                }, 500);
+                return;
+            }
+            if (ans === currentAnswer) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const questionText = questionEl.textContent.replace(' = ?', '');
+                const problems = load(problemsKey);
+                problems.push({
+                    mode: currentGameMode,
+                    question: questionText,
+                    answer: currentAnswer,
+                    time: elapsed,
+                    formattedTime: formatTime(elapsed),
+                    timestamp: Date.now()
+                });
+                save(problemsKey, problems);
+                const currentConfig = modeConfig[currentGameMode];
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: [currentConfig.hexColor || '#9b0089']
+                    });
+                }
+                showPopup(`Correct! Solved in ${formatTime(elapsed)}`);
+                newQuestion();
+            } else {
+                answerInputEl.style.borderColor = 'red';
+                answerInputEl.classList.add('shake');
+                setTimeout(() => {
+                    answerInputEl.style.borderColor = '';
+                    answerInputEl.classList.remove('shake');
+                    answerInputEl.select();
+                }, 500);
+            }
+        }
+        function displayStats() {
+            const daily = loadDaily();
+            const problems = load(problemsKey);
+            const totalProblems = problems.length;
+            let totalTime = 0;
+            const modeCounts = {};
+            const modeTimes = {};
+            problems.forEach(p => {
+                totalTime += p.time;
+                const mode = p.mode || 'unknown';
+                modeCounts[mode] = (modeCounts[mode] || 0) + 1;
+                modeTimes[mode] = (modeTimes[mode] || 0) + p.time;
+            });
+            const averageTime = totalProblems > 0 ? totalTime / totalProblems : 0;
+            statsTitleEl.textContent = `Stats (${totalProblems} Solved)`;
+            let html = `<h3>Overall Summary</h3>
+                <ul>
+                    <li>Total Problems Solved: ${totalProblems}</li>
+                    <li>Total Practice Time: ${formatTime(totalTime)}</li>
+                    <li>Average Time Per Problem: ${formatTime(averageTime)}</li>
+                </ul>`;
+            html += `<h3>Stats by Mode</h3><ul>`;
+            availableModes.forEach(mode => {
+                const count = modeCounts[mode] || 0;
+                const time = modeTimes[mode] || 0;
+                const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
+                const avgTime = count > 0 ? formatTime(time / count) : 'N/A';
+                if (count > 0) {
+                    html += `<li><b>${modeName}:</b> ${count} solved (Avg: ${avgTime})</li>`;
+                } else {
+                    html += `<li><b>${modeName}:</b> 0 solved</li>`;
+                }
+            });
+            if (modeCounts['unknown'] > 0) {
+                const count = modeCounts['unknown'];
+                const time = modeTimes['unknown'] || 0;
+                const avgTime = formatTime(time / count);
+                html += `<li><b>Unknown Mode (Old Stats):</b> ${count} solved (Avg: ${avgTime})</li>`;
+            }
+            html += `</ul>`;
+            html += `<h3>Recent Problems (Last 15)</h3>`;
+            if (totalProblems > 0) {
+                html += `<table>
+                    <thead><tr><th>Mode</th><th>Question</th><th>Answer</th><th>Time</th><th>Solved At</th></tr></thead>
+                    <tbody>`;
+                const latest = problems.slice(-15).reverse();
+                latest.forEach(p => {
+                    const modeName = p.mode ? p.mode.charAt(0).toUpperCase() + p.mode.slice(1) : 'N/A';
+                    html += `<tr>
+                        <td>${modeName}</td>
+                        <td>${p.question}</td>
+                        <td>${p.answer}</td>
+                        <td>${p.formattedTime}</td>
+                        <td>${formatDate(p.timestamp)}</td>
+                     </tr>`;
+                });
+                html += `</tbody></table>`;
+            } else {
+                html += `<p>No problems solved yet.</p>`
+            }
+            html += `<h3>Total Daily Time</h3>`;
+            const sortedDailyEntries = Object.entries(daily)
+                .map(([day, time]) => ({ day, time }))
+                .sort((a, b) => new Date(b.day) - new Date(a.day));
+            if (sortedDailyEntries.length > 0) {
+                html += `<ul>`;
+                sortedDailyEntries.forEach(entry => html += `<li>${entry.day}: ${formatTime(entry.time)}</li>`);
+                html += `</ul>`;
+            } else {
+                html += `<p>No daily time recorded yet.</p>`;
+            }
+            statsDetailsEl.innerHTML = html;
+            statsModal.style.display = 'flex';
+        }
+        function clearAllStats() {
+            if (confirm("Are you sure you want to delete ALL your saved statistics? This cannot be undone.")) {
+                localStorage.removeItem(problemsKey);
+                localStorage.removeItem(dailyTimeKey);
+                statsModal.style.display = 'none';
+                showPopup("All stats cleared!");
+            }
+        }
+        submitBtn.addEventListener('click', submitAnswer);
+        answerInputEl.addEventListener('keypress', e => { if (e.key === 'Enter') submitAnswer(); });
+        showStatsBtn.addEventListener('click', displayStats);
+        closeStatsBtn.addEventListener('click', () => statsModal.style.display = 'none');
+        clearStatsBtn.addEventListener('click', clearAllStats);
+        changeModeBtn.addEventListener('click', () => {
+            currentModeIndex = (currentModeIndex + 1) % availableModes.length;
+            currentGameMode = availableModes[currentModeIndex];
+            const config = modeConfig[currentGameMode];
+            const modeName = currentGameMode.charAt(0).toUpperCase() + currentGameMode.slice(1);
+            changeModeBtn.textContent = `Mode: ${modeName} (${config.operator})`;
+            newQuestion();
+        });
+        exportBtn.addEventListener('click', () => {
+            const exportObj = { daily: loadDaily(), problems: load(problemsKey) };
+            try {
+                navigator.clipboard.writeText(JSON.stringify(exportObj, null, 2))
+                    .then(() => {
+                        showPopup('Stats JSON copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy stats: ', err);
+                        alert('Could not copy stats to clipboard. See console for details.');
+                    });
+            } catch (err) {
+                console.error('Clipboard API not available or failed: ', err);
+                alert('Could not copy stats to clipboard. Your browser might not support this feature or it was blocked.');
+            }
+        });
+        window.addEventListener('beforeunload', () => {
+            const daily = loadDaily();
+            const today = new Date().toISOString().slice(0, 10);
+            const elapsed = (Date.now() - sessionStart) / 1000;
+            if (elapsed > 1) {
+                daily[today] = (daily[today] || 0) + elapsed;
+                saveDaily(daily);
+            }
+        });
+        const initialConfig = modeConfig[currentGameMode];
+        const initialModeName = currentGameMode.charAt(0).toUpperCase() + currentGameMode.slice(1);
+        changeModeBtn.textContent = `Mode: ${initialModeName} (${initialConfig.operator})`;
+        newQuestion(); 
+    </script>
 </body>
 
 </html>
